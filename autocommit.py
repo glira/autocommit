@@ -125,7 +125,7 @@ def gerar_mensagem_commit(diff_text):
     ]
     
     prompt = (
-        "Faça em portugues, gere uma mensagem de commit detalhada "
+        f"Faça em {getIdioma()}, gere uma mensagem de commit detalhada "
         "com base nas seguintes diferenças entre os arquivos. "
         "Sua primeira linha na resposta deve ser o título:\n"
         f"{diff_text}"
@@ -207,8 +207,8 @@ def gerar_mensagem_commit(diff_text):
     print("💡 Usando mensagem padrão: 'Commit automático'")
     return "Commit automático"
 
+# retorna Português se não especificar, caso contrário retorna valor que usuário especificou
 def getIdioma(l = args.idioma):
-
     return l
 
 def criar_commit(mensagem):
