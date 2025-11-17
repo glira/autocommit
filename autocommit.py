@@ -207,6 +207,10 @@ def gerar_mensagem_commit(diff_text):
     print("💡 Usando mensagem padrão: 'Commit automático'")
     return "Commit automático"
 
+def getIdioma(l = args.idioma):
+
+    return l
+
 def criar_commit(mensagem):
     """Cria um novo commit com a mensagem fornecida"""
     try:
