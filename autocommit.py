@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configura as variáveis de ambiente
-API_KEY = os.getenv('API_KEY')
+API_KEY = os.getenv('API_KEY', '').strip()  # Remove espaços e caracteres extras
 GIT_USER_NAME = os.getenv('GIT_USER_NAME')
 GIT_USER_EMAIL = os.getenv('GIT_USER_EMAIL')
 
@@ -110,46 +110,94 @@ def obter_alteracoes():
 
 def gerar_mensagem_commit(diff_text):
     """Gera uma mensagem de commit usando a API do Gemini"""
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={API_KEY}"
-        
-        payload = {
-            "contents": [{
-                "parts": [{
-                    "text": (
-                        "Faça em portugues, gere uma mensagem de commit detalhada "
-                        "com base nas seguintes diferenças entre os arquivos. "
-                        "Sua primeira linha na resposta deve ser o título:\n"
-                        f"{diff_text}"
-                    )
-                }]
-            }]
-        }
-        
-        response = requests.post(
-            url, 
-            headers={"Content-Type": "application/json"},
-            json=payload,
-            timeout=15
-        )
-        response.raise_for_status()
-        
-        # Processa a resposta
-        data = response.json()
-        mensagem = (data.get("candidates", [{}])[0]
-                   .get("content", {})
-                   .get("parts", [{}])[0]
-                   .get("text", "").strip())
-        
-        if mensagem:
-            print("\n--- Descritivo Gerado ---")
-            print(mensagem)
-            print("-------------------------\n")
-            return mensagem
-                
-    except Exception as e:
-        print(f"❌ Erro ao gerar mensagem com Gemini: {e}")
+    # Lista de modelos para tentar em ordem
+    modelos = [
+        'gemini-2.0-flash',  # Modelo mais recente (funcionando)
+        'gemini-1.5-flash',  # Versão estável
+        'gemini-1.5-pro',  # Versão pro
+    ]
     
+    prompt = (
+        "Faça em portugues, gere uma mensagem de commit detalhada "
+        "com base nas seguintes diferenças entre os arquivos. "
+        "Sua primeira linha na resposta deve ser o título:\n"
+        f"{diff_text}"
+    )
+    
+    print("🔄 Tentando gerar mensagem com API do Gemini...")
+    
+    # Limpa a API_KEY para garantir que não tenha caracteres extras
+    api_key_limpa = API_KEY.strip().lstrip('=').rstrip('=')
+    
+    for modelo in modelos:
+        try:
+            # URL sem query parameter - a key vai no header
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
+            
+            # Headers com a API key no formato correto
+            headers = {
+                "Content-Type": "application/json",
+                "X-goog-api-key": api_key_limpa
+            }
+            
+            payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }]
+            }
+            
+            response = requests.post(
+                url, 
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            # Se receber 400 ou 404, tenta próximo modelo
+            if response.status_code in [400, 404]:
+                print(f"⚠️  Modelo {modelo} não disponível (erro {response.status_code}). Tentando próximo...")
+                continue
+            
+            # Se receber 429, para de tentar
+            if response.status_code == 429:
+                print(f"⚠️  Limite de requisições atingido (429) para {modelo}.")
+                break
+            
+            response.raise_for_status()
+            
+            # Processa a resposta
+            data = response.json()
+            mensagem = (data.get("candidates", [{}])[0]
+                       .get("content", {})
+                       .get("parts", [{}])[0]
+                       .get("text", "").strip())
+            
+            if mensagem:
+                print(f"✅ Sucesso com modelo: {modelo}")
+                print("\n--- Descritivo Gerado ---")
+                print(mensagem)
+                print("-------------------------\n")
+                return mensagem
+                
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response else 0
+            if status_code in [400, 404]:
+                print(f"⚠️  Modelo {modelo} retornou erro {status_code}. Tentando próximo modelo...")
+                continue
+            elif status_code == 429:
+                print(f"⚠️  Limite de requisições atingido (429) para {modelo}.")
+                break
+            else:
+                print(f"⚠️  Erro HTTP {status_code} com {modelo}.")
+                continue
+        except Exception as e:
+            print(f"⚠️  Erro ao tentar {modelo}: {str(e)[:100]}")
+            continue
+    
+    print("\n❌ Não foi possível gerar mensagem com nenhum modelo do Gemini.")
+    print("💡 Usando mensagem padrão: 'Commit automático'")
     return "Commit automático"
 
 def criar_commit(mensagem):
@@ -183,9 +231,15 @@ def main():
 
         # Gera mensagem de commit
         mensagem = gerar_mensagem_commit(alteracoes)
+        
+        # Mostra a mensagem que será usada
+        if mensagem == "Commit automático":
+            print(f"\n📝 Mensagem que será usada: '{mensagem}'")
+        else:
+            print(f"\n📝 Mensagem gerada: '{mensagem}'")
 
         # Confirma com o usuário
-        confirmar = input("❓ Deseja usar este descritivo para o commit? (s/n): ").strip().lower()
+        confirmar = input("❓ Deseja usar esta mensagem para o commit? (s/n): ").strip().lower()
         if confirmar != 's':
             print("❌ Commit cancelado.")
             return
