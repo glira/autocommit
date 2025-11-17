@@ -125,7 +125,7 @@ def gerar_mensagem_commit(diff_text):
     ]
     
     prompt = (
-        f"Faça em {getIdioma()}, gere uma mensagem de commit detalhada "
+        f"Faça em {getIdioma()}, gere uma mensagem de commit detalhada " #retorna idioma recebido no parâmetro
         "com base nas seguintes diferenças entre os arquivos. "
         "Sua primeira linha na resposta deve ser o título:\n"
         f"{diff_text}"
