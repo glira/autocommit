@@ -1,8 +1,11 @@
 import os
 import sys
+import argparse
 import subprocess
 import requests
 from dotenv import load_dotenv
+
+
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -11,6 +14,11 @@ load_dotenv()
 API_KEY = os.getenv('API_KEY', '').strip()  # Remove espaços e caracteres extras
 GIT_USER_NAME = os.getenv('GIT_USER_NAME')
 GIT_USER_EMAIL = os.getenv('GIT_USER_EMAIL')
+
+# Configura o recebimento de argumentos
+argumentos = argparse.ArgumentParser(description ='Recebe idioma')
+argumentos.add_argument("-", "-l", "--idioma", "--language", help="Idioma a ser traduzido", default="Português")
+args = argumentos.parse_args()
 
 def verificar_variaveis_ambiente():
     """Verifica se todas as variáveis de ambiente necessárias estão configuradas"""
