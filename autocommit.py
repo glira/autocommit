@@ -17,7 +17,7 @@ GIT_USER_EMAIL = os.getenv('GIT_USER_EMAIL')
 
 # Configura o recebimento de argumentos
 argumentos = argparse.ArgumentParser(description ='Recebe idioma')
-argumentos.add_argument("-i", "-l", "--idioma", "--language", help="Idioma a ser traduzido", default="Português")
+argumentos.add_argument("-i", "-l", "--idioma", "--language", type=str, help="Idioma a ser traduzido", default="Português")
 args = argumentos.parse_args()
 
 def verificar_variaveis_ambiente():
@@ -209,7 +209,7 @@ def gerar_mensagem_commit(diff_text):
 
 # retorna Português se não especificar, caso contrário retorna valor que usuário especificou
 def getIdioma(l = args.idioma):
-    if str(l).isspace():
+    if str(l).isspace() or not l: #se for string com apenas espaço ou nao tiver conteudo
         raise ValueError(f"{sys.argv[(len(sys.argv)-2)]}: Valor de idioma não pode ser vazio!")
     return l
 
