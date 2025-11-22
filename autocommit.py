@@ -32,6 +32,7 @@ def verificar_variaveis_ambiente():
 def verificar_repositorio():
     """Verifica se o diretório atual é um repositório Git"""
     try:
+        #refeito para deteectar o diretório se é repositório ou nao
         git_dir = subprocess.run(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE, text=True, check=True) #tenta pegar diretorio do repositorio git atual
         current_dir=git_dir.stdout.strip() #remove quebra de linha
         
