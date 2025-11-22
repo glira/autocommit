@@ -119,7 +119,7 @@ def gerar_mensagem_commit(diff_text):
     """Gera uma mensagem de commit usando a API do Gemini"""
     # Lista de modelos para tentar em ordem
     modelos = [
-        'gemini-2.0-flash',  # Modelo mais recente (funcionando)
+        'gemini-2.5-flash',  # Modelo mais recente (funcionando)
         'gemini-1.5-flash',  # Versão estável
         'gemini-1.5-pro',  # Versão pro
     ]
