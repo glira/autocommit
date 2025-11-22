@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import subprocess
@@ -32,7 +31,13 @@ def verificar_variaveis_ambiente():
 
 def verificar_repositorio():
     """Verifica se o diretório atual é um repositório Git"""
-    current_dir = os.getcwd()
+    try:
+        git_dir = subprocess.run(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE, text=True, check=True) #tenta pegar diretorio do repositorio git atual
+        current_dir=git_dir.stdout.strip() #remove quebra de linha
+        
+    except:
+        current_dir = os.getcwd() #se nao achar pega o normal
+
     print(f"📂 Diretório atual: {current_dir}")
 
     if not os.path.exists(os.path.join(current_dir, ".git")):
@@ -71,8 +76,7 @@ def obter_alteracoes():
             
             # Usa diff --no-index para mostrar todo o conteúdo como novo
             diff = subprocess.run(["git", "diff", "--no-index", "/dev/null", "."],
-                                capture_output=True, text=True, stderr=subprocess.DEVNULL).stdout.strip()
-            return diff
+                                stdout=subprocess.PIPE, text=True, stderr=subprocess.DEVNULL).stdout.strip()
         
         # Se for um repositório git, verifica alterações
         status = subprocess.run(["git", "status", "--porcelain"], 
@@ -112,7 +116,7 @@ def gerar_mensagem_commit(diff_text):
     """Gera uma mensagem de commit usando a API do Gemini"""
     # Lista de modelos para tentar em ordem
     modelos = [
-        'gemini-2.0-flash',  # Modelo mais recente (funcionando)
+        'gemini-2.5-flash',  # Modelo mais recente (funcionando)
         'gemini-1.5-flash',  # Versão estável
         'gemini-1.5-pro',  # Versão pro
     ]
