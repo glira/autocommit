@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
 import os
 import sys
+import argparse
 import subprocess
 import requests
 from dotenv import load_dotenv
+
+
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -12,6 +14,11 @@ load_dotenv()
 API_KEY = os.getenv('API_KEY', '').strip()  # Remove espaços e caracteres extras
 GIT_USER_NAME = os.getenv('GIT_USER_NAME')
 GIT_USER_EMAIL = os.getenv('GIT_USER_EMAIL')
+
+# Configura o recebimento de argumentos
+argumentos = argparse.ArgumentParser(description ='Recebe idioma')
+argumentos.add_argument("-i", "-l", "--idioma", "--language", type=str, help="Idioma a ser traduzido", default="Português")
+args = argumentos.parse_args()
 
 def verificar_variaveis_ambiente():
     """Verifica se todas as variáveis de ambiente necessárias estão configuradas"""
@@ -112,13 +119,13 @@ def gerar_mensagem_commit(diff_text):
     """Gera uma mensagem de commit usando a API do Gemini"""
     # Lista de modelos para tentar em ordem
     modelos = [
-        'gemini-2.0-flash',  # Modelo mais recente (funcionando)
+        'gemini-2.5-flash',  # Modelo mais recente (funcionando)
         'gemini-1.5-flash',  # Versão estável
         'gemini-1.5-pro',  # Versão pro
     ]
     
     prompt = (
-        "Faça em portugues, gere uma mensagem de commit detalhada "
+        f"Faça em {getIdioma()}, gere uma mensagem de commit detalhada " #retorna idioma recebido no parâmetro
         "com base nas seguintes diferenças entre os arquivos. "
         "Sua primeira linha na resposta deve ser o título:\n"
         f"{diff_text}"
@@ -199,6 +206,12 @@ def gerar_mensagem_commit(diff_text):
     print("\n❌ Não foi possível gerar mensagem com nenhum modelo do Gemini.")
     print("💡 Usando mensagem padrão: 'Commit automático'")
     return "Commit automático"
+
+# retorna Português se não especificar, caso contrário retorna valor que usuário especificou
+def getIdioma(l = args.idioma):
+    if str(l).isspace() or not l: #se for string com apenas espaço ou nao tiver conteudo
+        raise ValueError(f"{sys.argv[(len(sys.argv)-2)]}: Valor de idioma não pode ser vazio!")
+    return l
 
 def criar_commit(mensagem):
     """Cria um novo commit com a mensagem fornecida"""
