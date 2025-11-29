@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
 import os
 import sys
+import argparse
 import subprocess
 import requests
 from dotenv import load_dotenv
+
+
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -12,6 +14,11 @@ load_dotenv()
 API_KEY = os.getenv('API_KEY', '').strip()  # Remove espaços e caracteres extras
 GIT_USER_NAME = os.getenv('GIT_USER_NAME')
 GIT_USER_EMAIL = os.getenv('GIT_USER_EMAIL')
+
+# Configura o recebimento de argumentos
+argumentos = argparse.ArgumentParser(description ='Recebe idioma')
+argumentos.add_argument("-i", "-l", "--idioma", "--language", type=str, help="Idioma a ser traduzido", default="Português")
+args = argumentos.parse_args()
 
 def verificar_variaveis_ambiente():
     """Verifica se todas as variáveis de ambiente necessárias estão configuradas"""
@@ -32,7 +39,14 @@ def verificar_variaveis_ambiente():
 
 def verificar_repositorio():
     """Verifica se o diretório atual é um repositório Git"""
-    current_dir = os.getcwd()
+    try:
+        #refeito para deteectar o diretório se é repositório ou nao
+        git_dir = subprocess.run(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE, text=True, check=True) #tenta pegar diretorio do repositorio git atual
+        current_dir=git_dir.stdout.strip() #remove quebra de linha
+        
+    except:
+        current_dir = os.getcwd() #se nao achar pega o normal
+
     print(f"📂 Diretório atual: {current_dir}")
 
     if not os.path.exists(os.path.join(current_dir, ".git")):
@@ -71,12 +85,11 @@ def obter_alteracoes():
             
             # Usa diff --no-index para mostrar todo o conteúdo como novo
             diff = subprocess.run(["git", "diff", "--no-index", "/dev/null", "."],
-                                capture_output=True, text=True, stderr=subprocess.DEVNULL).stdout.strip()
-            return diff
+                                stdout=subprocess.PIPE, encoding='utf-8', text=True, stderr=subprocess.DEVNULL).stdout.strip()
         
         # Se for um repositório git, verifica alterações
         status = subprocess.run(["git", "status", "--porcelain"], 
-                              capture_output=True, text=True).stdout.strip()
+                              capture_output=True, encoding='utf-8', text=True).stdout.strip()
         
         if not status:
             print("ℹ️ Nenhuma alteração detectada para commit.")
@@ -90,13 +103,13 @@ def obter_alteracoes():
             # Adiciona arquivos não rastreados ao index temporariamente
             subprocess.run(["git", "add", "-N", "."], check=True)
             diff = subprocess.run(["git", "diff"], 
-                                capture_output=True, text=True).stdout.strip()
+                                capture_output=True, encoding='utf-8', text=True).stdout.strip()
             # Reseta o index
             subprocess.run(["git", "reset"], check=True)
         else:
             # Caso contrário, usa diff normal
             diff = subprocess.run(["git", "diff"], 
-                                capture_output=True, text=True).stdout.strip()
+                                capture_output=True, encoding='utf-8', text=True).stdout.strip()
         
         if not diff:
             print("ℹ️ Nenhuma diferença detectada para gerar o descritivo.")
@@ -112,13 +125,13 @@ def gerar_mensagem_commit(diff_text):
     """Gera uma mensagem de commit usando a API do Gemini"""
     # Lista de modelos para tentar em ordem
     modelos = [
-        'gemini-2.0-flash',  # Modelo mais recente (funcionando)
-        'gemini-1.5-flash',  # Versão estável
-        'gemini-1.5-pro',  # Versão pro
+        'gemini-2.5-flash',  # Modelo agradável
+        'gemini-2.5-flash-lite',  # Versão mais rápida em resposta
+        'gemini-2.5-pro'  # Versão pro
     ]
     
     prompt = (
-        "Faça em portugues, gere uma mensagem de commit detalhada "
+        f"Faça em {getIdioma()}, gere uma mensagem de commit detalhada " #retorna idioma recebido no parâmetro
         "com base nas seguintes diferenças entre os arquivos. "
         "Sua primeira linha na resposta deve ser o título:\n"
         f"{diff_text}"
@@ -199,6 +212,12 @@ def gerar_mensagem_commit(diff_text):
     print("\n❌ Não foi possível gerar mensagem com nenhum modelo do Gemini.")
     print("💡 Usando mensagem padrão: 'Commit automático'")
     return "Commit automático"
+
+# retorna Português se não especificar, caso contrário retorna valor que usuário especificou
+def getIdioma(l = args.idioma):
+    if str(l).isspace() or not l: #se for string com apenas espaço ou nao tiver conteudo
+        raise ValueError(f"{sys.argv[(len(sys.argv)-2)]}: Valor de idioma não pode ser vazio!")
+    return l
 
 def criar_commit(mensagem):
     """Cria um novo commit com a mensagem fornecida"""
